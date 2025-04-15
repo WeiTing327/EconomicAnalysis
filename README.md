@@ -16,7 +16,7 @@
 
 ---
 
-# 執行步驟
+執行步驟
 1. 取得FRED的API然後取代.env的API
 2. 執行get_data.py -> 目的 : 從FRED抓資料
 3. 執行measure_build.py -> 目的 : 建立measure.pt
