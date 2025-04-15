@@ -9,8 +9,16 @@ import rule_library_username as rule_library
 
 
 class RuleEvaluator:
-    def __init__(self, file_path, combined_rule_info, output_folder_name, rule_index, lonshort, device='cpu'):
-        self.df = pd.read_csv(file_path, encoding='utf-8-sig')
+    def __init__(
+        self,
+        file_path,
+        combined_rule_info,
+        output_folder_name,
+        rule_index,
+        lonshort,
+        device="cpu",
+    ):
+        self.df = pd.read_csv(file_path, encoding="utf-8-sig")
         self.output_folder_name = output_folder_name
         self.rule_index = rule_index
         self.lonshort = lonshort
@@ -18,8 +26,10 @@ class RuleEvaluator:
         self.evaluate_combined_rule(self.df, combined_rule_info)
 
     def evaluate_combined_rule(self, df, combined_rule_info):
-        rule_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'rule')
-        measure_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'measure')
+        rule_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rule")
+        measure_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "measure"
+        )
 
         # 從結構中提取數據
         rule_use = combined_rule_info["rule_use"]
@@ -38,7 +48,9 @@ class RuleEvaluator:
             if rule_method:
                 rule_method()  # 如果需要參數，可以從 rule 中提取
 
-                tensor = load_tensor(os.path.join(rule_path, rule + ".pt"), method='hdf5')
+                tensor = load_tensor(
+                    os.path.join(rule_path, rule + ".pt"), method="hdf5"
+                )
 
                 # 將張量轉換為 PyTorch 張量，並移動到指定設備
                 tensor = torch.tensor(tensor, device=self.device, dtype=torch.float32)
@@ -48,8 +60,11 @@ class RuleEvaluator:
                     tensor = tensor.unsqueeze(1)  # 將一維張量擴展為二維
 
                 # 對齊張量大小
-                if tensor.shape[0] < - max_length:
-                    padding = torch.zeros((max_length - tensor.shape[0], tensor.shape[1]), device=self.device)
+                if tensor.shape[0] < -max_length:
+                    padding = torch.zeros(
+                        (max_length - tensor.shape[0], tensor.shape[1]),
+                        device=self.device,
+                    )
                     tensor = torch.cat([tensor, padding], dim=0)
                 elif tensor.shape[0] > max_length:
                     tensor = tensor[:max_length]
@@ -71,65 +86,57 @@ class RuleEvaluator:
 
         # 準備數據
         measure_name = obj_rule.cross_section_data_file_name[0]
-        date_list = load_pickle(os.path.join(measure_path, measure_name, measure_name + "_date_list.pkl"))
+        date_list = load_pickle(
+            os.path.join(measure_path, measure_name, measure_name + "_date_list.pkl")
+        )
 
-        df['Date'] = pd.to_datetime(df['Date'], format='%Y/%m/%d')
-        date_df = pd.DataFrame({'Date': date_list})
-        merged_df = pd.merge(date_df, df, on='Date', how='left')
-        merged_df[['波段低點區間', '波段高點區間']] = merged_df[['波段低點區間', '波段高點區間']].fillna(0)
+        df["Date"] = pd.to_datetime(df["Date"], format="%Y/%m/%d")
+        date_df = pd.DataFrame({"Date": date_list})
+        merged_df = pd.merge(date_df, df, on="Date", how="left")
+        merged_df[["波段低點區間", "波段高點區間"]] = merged_df[
+            ["波段低點區間", "波段高點區間"]
+        ].fillna(0)
 
         # 將 tensor_df 合併到 merged_df
         merged_df = pd.concat([merged_df, tensor_df], axis=1)
 
         # 設置 y_pred 和 y_true
         y_pred = merged_df[f"combined_rule_{self.rule_index}"] > 0
-        y_true = merged_df['波段低點區間'] if self.lonshort == 'long' else merged_df['波段高點區間']
+        y_true = (
+            merged_df["波段低點區間"]
+            if self.lonshort == "long"
+            else merged_df["波段高點區間"]
+        )
 
         # 計算評估指標
         results = {
-            'measure': measure_name,
-            'combined_rule': rule_use,
-            'rule_descriptions': rule_describe,
-            'accuracy': accuracy_score(y_true, y_pred),
-            'precision': precision_score(y_true, y_pred, zero_division=0),
-            'recall': recall_score(y_true, y_pred, zero_division=0),
-            'f1_score': f1_score(y_true, y_pred, zero_division=0),
-
-            # 'measure_name': list(set(measure_name_list_pure)),
-            # 'measure_list': measure_name_list,
-            # 'combined_rule': rule_use,
-            # 'rule_descriptions': rule_describe,
-            # 'accuracy': accuracy_score(y_true, y_pred),
-            # 'precision': precision_score(y_true, y_pred, zero_division=0),
-            # 'recall': recall_score(y_true, y_pred, zero_division=0),
-            # 'f1_score': f1_score(y_true, y_pred, zero_division=0),
-            # 'longshort': self.lonshort,
-            # 'strategy_name': self.strategy_name,
-            # 'count_0': int(len (y_pred) - y_pred. sum()),
-            # 'count_1': int(y_pred.sum()),
-            # '區間數量': int(count_intervals_with_signal_result[0]),
-            # '幾個區間有訊號': int(count_intervals_with_signal_result[1]),
-            # '標註區間日期': count_intervals_with_signal_result[2],
-            # '訊號區間日期': count_intervals_with_signal_result[3],
-            # '分析日期起日': merged_df.index [0].strftime('%Y-%m-%d'),
-            # '分析日期迄日': merged_df.index[-1].strftime('%Y-%m-%d'),
-            # '標的':merged_df.columns[0],
-            # '訊號起日':signal_start_date,
-            # '訊號迄日':signal_end_date,
+            "measure": measure_name,
+            "combined_rule": rule_use,
+            "rule_descriptions": rule_describe,
+            "accuracy": accuracy_score(y_true, y_pred),
+            "precision": precision_score(y_true, y_pred, zero_division=0),
+            "recall": recall_score(y_true, y_pred, zero_division=0),
+            "f1_score": f1_score(y_true, y_pred, zero_division=0),
         }
 
         # 創建對應的輸出資料夾，保持編號一致
-        output_folder_path = os.path.join(self.output_folder_name, f"output_{self.lonshort}_{self.rule_index}")
+        output_folder_path = os.path.join(
+            self.output_folder_name, f"output_{self.lonshort}_{self.rule_index}"
+        )
         os.makedirs(output_folder_path, exist_ok=True)
 
         # 將結果保存為 .json 檔案
-        json_path = os.path.join(output_folder_path, f"output_{self.lonshort}_{self.rule_index}.json")
-        with open(json_path, 'w', encoding='utf-8') as json_file:
+        json_path = os.path.join(
+            output_folder_path, f"output_{self.lonshort}_{self.rule_index}.json"
+        )
+        with open(json_path, "w", encoding="utf-8") as json_file:
             json.dump(results, json_file, ensure_ascii=False, indent=4)
 
         # 將結果保存為 .csv 檔案
-        csv_path = os.path.join(output_folder_path, f"output_{self.lonshort}_{self.rule_index}.csv")
-        pd.DataFrame([results]).to_csv(csv_path, encoding='utf-8-sig', index=False)
+        csv_path = os.path.join(
+            output_folder_path, f"output_{self.lonshort}_{self.rule_index}.csv"
+        )
+        pd.DataFrame([results]).to_csv(csv_path, encoding="utf-8-sig", index=False)
 
         print(f"結果已保存至: {output_folder_path}")
 
@@ -141,29 +148,35 @@ def main():
 
     combine_rule_path = "combine_rule"
 
-    for prefix in ['combine_rule_long_', 'combine_rule_short_']:
-        lonshort = 'long' if 'long' in prefix else 'short'
+    for prefix in ["combine_rule_long_", "combine_rule_short_"]:
+        lonshort = "long" if "long" in prefix else "short"
 
-        subfolders = [folder for folder in os.listdir(combine_rule_path) if folder.startswith(prefix)]
+        subfolders = [
+            folder
+            for folder in os.listdir(combine_rule_path)
+            if folder.startswith(prefix)
+        ]
 
         for folder_name in subfolders:
             folder_path = os.path.join(combine_rule_path, folder_name)
 
             if os.path.exists(folder_path):
                 try:
-                    rule_index = int(folder_name.split('_')[-1])
+                    rule_index = int(folder_name.split("_")[-1])
                 except ValueError:
                     print(f"錯誤: 無法從 {folder_name} 提取編號")
                     continue
 
-                json_files = [f for f in os.listdir(folder_path) if f.endswith('.json')]
+                json_files = [f for f in os.listdir(folder_path) if f.endswith(".json")]
                 if json_files:
                     json_path = os.path.join(folder_path, json_files[0])
-                    with open(json_path, 'r', encoding='utf-8') as file:
+                    with open(json_path, "r", encoding="utf-8") as file:
                         combined_rule_info = json.load(file)
 
-                    if not isinstance(combined_rule_info, dict) or \
-                            not all(key in combined_rule_info for key in ['rule_use', 'rule_weight', 'rule_describe']):
+                    if not isinstance(combined_rule_info, dict) or not all(
+                        key in combined_rule_info
+                        for key in ["rule_use", "rule_weight", "rule_describe"]
+                    ):
                         print(f"錯誤: {json_path} 中的規則格式不正確，請確認格式。")
                         continue
 
@@ -174,9 +187,9 @@ def main():
                         output_folder_name=output_folder,
                         rule_index=rule_index,
                         lonshort=lonshort,
-                        device='cuda' if torch.cuda.is_available() else 'cpu'
+                        device="cuda" if torch.cuda.is_available() else "cpu",
                     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
